@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>BIRDS</title>
+</head>
+<body>
+	<canvas id='canvas'></canvas>
+</body>
+</html>
+
+<style>
+	#canvas {
+		display: block;
+		margin: 3rem auto;
+		border: thin solid gray;
+	}
+</style>
+
+<script>
+	function Point (x, y, bearing = 90, hasChangedBearing = false) {
+		this.x = x;
+		this.y = y;
+		this.bearing = bearing
+		this.hasChangedBearing = hasChangedBearing
+	}
+
+	function degToRad (deg) {
+		return deg / 360 * 2*Math.PI;
+	}
+
+	function getDistanceBetweenPoints (a, b) {
+		return Math.sqrt( (a.x - b.x)**2 + (a.y - b.y)**2 );
+	}
+
+	function getNNearestNeighbours (arr, point, n) {
+		let distanceAndIndex = arr.map(neighbour => {
+			return Object.assign(neighbour, {
+				distance: getDistanceBetweenPoints(point, neighbour)
+			});
+		});
+
+		let sortedNeighbours = distanceAndIndex.sort((a, b) => {
+			return a.distance - b.distance
+		});
+
+		return sortedNeighbours.slice(0, n);
+	}
+
+	function translatePointInDirection (point, magnitude) {
+		let x = magnitude * Math.sin( degToRad(point.bearing) );
+		let y = magnitude * Math.cos( degToRad(point.bearing) );
+
+		return new Point(x + point.x, y + point.y, point.bearing);
+	}
+
+	function changeBearingWithProbability (arr, bearingChange, probability) {
+		return arr.map(point => {
+			if(Math.random() <= probability) {
+				let sign = Math.random() <= 0.5 ? 1 : -1;
+
+				point.bearing += Math.random() * sign*bearingChange;
+				point.hasChangedBearing = true;
+			}
+			
+			return point
+		});
+	}
+
+	function getAverageBearing (arr) {
+		let totalDistance = arr.reduce((sum, point) => sum + point.distance, 0);
+		let sumWeightsAndBearing = arr.reduce((sum, point) => {
+			return sum + Math.pow(totalDistance-point.distance, 1) * point.bearing;
+		}, 0);
+		let sumWeights = arr.reduce((sum, point) => {
+			return sum + Math.pow(totalDistance-point.distance, 1);
+		}, 0);
+
+
+		return sumWeightsAndBearing / sumWeights;
+		//unweighted arithmetical average
+		//return arr.reduce((sum, point) => sum + point.bearing, 0) / arr.length;
+	}
+
+
+	function drawPoints (obj, ctx, arr) {
+		ctx.clearRect(0, 0, obj.width, obj.height);	
+
+		arr.forEach(point => {
+			ctx.fillRect(point.x, point.y, 5, 5);
+		})
+	}
+
+	function main (obj) {
+		let spacing = 10;
+		let canvas = document.getElementById('canvas');
+		let ctx = canvas.getContext('2d');
+
+		canvas.setAttribute('height', obj.height);
+		canvas.setAttribute('width', obj.width);
+
+		let birds = [];
+
+		for(let i = 0; i < obj.rows*obj.columns; i++) {
+			let x = 10 + (i % obj.rows) * spacing;
+			let y = (obj.height / 2) + Math.floor(i / obj.rows) * spacing;
+
+			birds.push( new Point(x, y) );
+		}
+
+		function getArrayAndDraw () {
+			let bearingsChangedArr = changeBearingWithProbability(birds, obj.bearingChange, obj.probability);
+			let bearingsAveragedArr = bearingsChangedArr.map(point => {
+				if(!point.hasBearingChanged) {
+					let nearestNeighboursArr = getNNearestNeighbours(bearingsChangedArr, point, obj.nearestNeighbours);
+
+					point.hasBearingChanged = false;
+					point.bearing = getAverageBearing(nearestNeighboursArr);
+				}
+
+				return translatePointInDirection(point, obj.distance);
+			});
+
+			birds = bearingsAveragedArr
+
+			drawPoints(obj, ctx, birds)
+		}
+
+		getArrayAndDraw()
+		setTimeout(() => {
+			setInterval(getArrayAndDraw, 50)
+		}, 1000)
+	}
+
+	main({
+		height: 500,
+		width: 1000,
+		rows: 10,
+		columns: 10,
+		bearingChange: 45,
+		probability: 0.5,
+		nearestNeighbours: 7,
+		distance: 3
+	});
+</script>
