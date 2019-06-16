@@ -20,8 +20,10 @@
 	function Point (x, y, bearing = 90, hasChangedBearing = false) {
 		this.x = x;
 		this.y = y;
-		this.bearing = bearing
-		this.hasChangedBearing = hasChangedBearing
+		this.bearing = bearing;
+		this.hasChangedBearing = hasChangedBearing;
+
+		this.hue = Math.random() * 360;
 	}
 
 	function degToRad (deg) {
@@ -50,7 +52,10 @@
 		let x = magnitude * Math.sin( degToRad(point.bearing) );
 		let y = magnitude * Math.cos( degToRad(point.bearing) );
 
-		return new Point(x + point.x, y + point.y, point.bearing);
+		point.x += x;
+		point.y += y;
+
+		return point;
 	}
 
 	function changeBearingWithProbability (arr, bearingChange, probability) {
@@ -86,6 +91,7 @@
 		ctx.clearRect(0, 0, obj.width, obj.height);	
 
 		arr.forEach(point => {
+			ctx.fillStyle = `hsl(${point.hue}, 100%, 50%)`;
 			ctx.fillRect(point.x, point.y, 5, 5);
 		})
 	}
