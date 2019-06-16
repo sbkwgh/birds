@@ -17,7 +17,8 @@
 </style>
 
 <script>
-	const HUE_START = Math.random() * 300;
+	const HUE_WIDTH = 60;
+	const HUE_START = Math.random() * (360-HUE_WIDTH);
 
 	function Point (x, y, bearing = 90, hasChangedBearing = false) {
 		this.x = x;
@@ -25,7 +26,7 @@
 		this.bearing = bearing;
 		this.hasChangedBearing = hasChangedBearing;
 
-		this.hue = Math.random() * 70 + HUE_START;
+		this.hue = Math.random() * HUE_WIDTH + HUE_START;
 	}
 
 	function degToRad (deg) {
