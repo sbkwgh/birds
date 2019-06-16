@@ -17,13 +17,15 @@
 </style>
 
 <script>
+	const HUE_START = Math.random() * 300;
+
 	function Point (x, y, bearing = 90, hasChangedBearing = false) {
 		this.x = x;
 		this.y = y;
 		this.bearing = bearing;
 		this.hasChangedBearing = hasChangedBearing;
 
-		this.hue = Math.random() * 360;
+		this.hue = Math.random() * 70 + HUE_START;
 	}
 
 	function degToRad (deg) {
@@ -111,7 +113,7 @@
 
 
 	function drawPoints (obj, ctx, arr) {
-		ctx.clearRect(0, 0, obj.width, obj.height);	
+		//ctx.clearRect(0, 0, obj.width, obj.height);	
 
 		arr.forEach(point => {
 			ctx.fillStyle = `hsl(${point.hue}, 100%, 50%)`;
