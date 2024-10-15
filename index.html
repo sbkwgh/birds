@@ -1,177 +1,180 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>BIRDS</title>
+	<meta charset='UTF-8'>
+	<title>birds</title>
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+			padding: 0;
+		}
+
+		#container {
+			align-items: center;
+			display: flex;
+			height: 100%;
+			justify-content: center;
+		}
+
+		canvas {
+			border: thin solid gray;
+		}
+	</style>
 </head>
 <body>
-	<canvas id='canvas'></canvas>
+	<div id='container'>
+		<canvas></canvas>
+	</div>
+	<script>
+		const Store = {
+			canvas: {
+				height: 500,
+				width: 1000
+			},
+			bird: {
+				translateDistance: 5,
+				dirDrift: 3,
+				size: 10,
+				neighbourRadius: 50
+			},
+			totalBirds: 200,
+			alignmentFactor: 0.1,
+			cohesionFactor: 0.001
+		};
+		
+		class Bird {
+			constructor (x, y, direction) {
+				this.x = x;
+				this.y = y;
+				this.direction = direction;
+			}
+		
+		
+			move (distance, direction) {
+				[this.x, this.y] = moveInBearing(this.x, this.y, distance, direction);
+			}
+		
+			getNeighbours (birds) {
+				return birds.filter(bird => {
+					const distance = getDistance([this.x, this.y], [bird.x, bird.y]);
+					
+					return distance < Store.bird.neighbourRadius;
+				});
+			}
+		
+			render (ctx) {
+				const firstPoint = moveInBearing(this.x, this.y, Store.bird.size*0.385, this.direction+degToRad(90));
+				const secondPoint = moveInBearing(...firstPoint, Store.bird.size, this.direction+degToRad(-22.5));
+				const thirdPoint = moveInBearing(...secondPoint, Store.bird.size, this.direction+degToRad(-157.5));
+				const fourthPoint = moveInBearing(...thirdPoint, Store.bird.size*0.385, this.direction+degToRad(90));
+		
+				ctx.beginPath();
+				ctx.moveTo(this.x, this.y);
+				ctx.lineTo(...firstPoint);
+				ctx.lineTo(...secondPoint);
+				ctx.lineTo(...thirdPoint);
+				ctx.lineTo(...fourthPoint)
+				ctx.fill();		
+			}
+		}
+		
+		const $canvas = document.querySelector('canvas');
+		$canvas.setAttribute('height', Store.canvas.height);
+		$canvas.setAttribute('width', Store.canvas.width);
+		
+		const ctx = $canvas.getContext('2d');
+		
+		
+		const birds = [];
+		for (let i = 0; i < Store.totalBirds; i++) {
+			const bird = new Bird(
+				rand(0, Store.canvas.width),
+				rand(0, Store.canvas.height),
+				rand(0, 2*Math.PI)
+			);
+			
+			birds.push(bird);
+		}
+		
+		setInterval(function () {
+			ctx.clearRect(0, 0, Store.canvas.width, Store.canvas.height);
+		
+			birds.forEach(bird => {
+				const neighbours = bird.getNeighbours(birds);
+				if (!neighbours.length) return;
+				
+				const meanDir = neighbours.reduce((acc, curr) => acc + curr.direction, 0) / neighbours.length;
+				const meanX = neighbours.reduce((acc, curr) => acc + curr.x, 0) / neighbours.length;
+				const meanY = neighbours.reduce((acc, curr) => acc + curr.y, 0) / neighbours.length;
+		
+				bird.direction += Store.alignmentFactor * (meanDir-bird.direction);
+				bird.x += Store.cohesionFactor * (meanX-bird.x);
+				bird.y += Store.cohesionFactor * (meanY-bird.y);
+			});
+			birds.forEach(bird => {
+				const dir = bird.direction;
+				const minEdgeDist = Math.min(bird.x, Store.canvas.width - bird.x, bird.y, Store.canvas.height - bird.y);
+		
+				if (minEdgeDist < Store.canvas.width*0.05 || minEdgeDist < Store.canvas.height*0.05) {
+					bird.direction = rand(dir-degToRad(Store.bird.dirDrift), dir+degToRad(Store.bird.dirDrift*5));
+				} else {
+					bird.direction = rand(dir-degToRad(Store.bird.dirDrift), dir+degToRad(Store.bird.dirDrift));
+				}
+		
+		
+				bird.move(Store.bird.translateDistance, bird.direction);
+				bird.render(ctx);
+			});
+		}, 50);
+		
+		
+		function getDistance (vec1, vec2) {
+			if (vec1.length !== vec2.length) {
+				throw new Error("Vectors must have same length");
+			}
+		
+			const sumOfSquares = vec1.reduce((acc, vec1Cur, idx) => {
+				return acc + (vec1Cur - vec2[idx])**2;
+			}, 0);
+		
+			return Math.sqrt(sumOfSquares);
+		}
+		
+		function rand (min, max) {
+			return Math.random() * (max-min) + min;
+		}
+		
+		function degToRad (deg) {
+			return deg * Math.PI / 180;
+		}
+		
+		function moveInBearing (x, y, l, bearing) {
+			// So bearing ranges 0-2Pi radians
+			bearing = bearing % (2*Math.PI);
+		
+			//Convert bearing into theta value for trig formulae
+			//Adjusting x and y values so in correct direction for angle
+			if (bearing < Math.PI/2) {
+				theta = bearing;
+				xSign = 1;
+				ySign = 1;
+			} else if (bearing >= Math.PI/2 && bearing < 2*Math.PI) {
+				theta = Math.PI - bearing;
+				xSign = 1;
+				ySign = -1;
+			} else if (bearing >= 2*Math.PI && bearing < 3*Math.PI/2) {
+				theta = Math.PI - bearing;
+				xSign = -1;
+				ySign = -1;
+			} else {
+				theta = 2*Math.PI - bearing;
+				xSign = -1;
+				ySign = 1;
+			}
+		
+			return [x + Math.sin(theta)*l*xSign, y + Math.cos(theta)*l*ySign];
+		}
+	</script>
 </body>
 </html>
-
-<style>
-	#canvas {
-		display: block;
-		margin: 3rem auto;
-		border: thin solid gray;
-	}
-</style>
-
-<script>
-	const HUE_WIDTH = 60;
-	const HUE_START = Math.random() * (360-HUE_WIDTH);
-
-	function Point (x, y, bearing = 90, hasChangedBearing = false) {
-		this.x = x;
-		this.y = y;
-		this.bearing = bearing;
-		this.hasChangedBearing = hasChangedBearing;
-
-		this.hue = Math.random() * HUE_WIDTH + HUE_START;
-	}
-
-	function degToRad (deg) {
-		return deg / 360 * 2*Math.PI;
-	}
-
-	function getDistanceBetweenPoints (a, b) {
-		return Math.sqrt( (a.x - b.x)**2 + (a.y - b.y)**2 );
-	}
-
-	function getNNearestNeighbours (arr, point, n) {
-		let distanceAndIndex = arr.map(neighbour => {
-			return Object.assign(neighbour, {
-				distance: getDistanceBetweenPoints(point, neighbour)
-			});
-		});
-
-		let sortedNeighbours = distanceAndIndex.sort((a, b) => {
-			return a.distance - b.distance
-		});
-
-		return sortedNeighbours.slice(0, n);
-	}
-
-	function translatePointInDirection (point, magnitude) {
-		let x = magnitude * Math.sin( degToRad(point.bearing) );
-		let y = magnitude * Math.cos( degToRad(point.bearing) );
-
-		point.x += x;
-		point.y += y;
-
-		return point;
-	}
-
-	//Return a probability (to change bearing by 180) based on how
-	//...exponentially close the point is to the boundary, providing
-	//...it has past the 'near' threshold
-	function setNearBoundaryProbability (point, boundaries, near) {
-		let [height, width] = boundaries;
-
-		let coef = 1.75;
-		//Map distance to edge to a probability (0-1)
-		let exp = x => Math.pow(x,coef) / Math.pow(near, coef);
-		//Get closest distance to edge
-		let distance = Math.min(point.x, width - point.x, point.y, height - point.y);
-
-		if((distance - near) <= 0) {
-			return exp(near-distance);
-		} else {
-			return 0;
-		}
-	}
-
-	function changeBearingWithProbability (arr, { bearingChange, probability, width, height, boundaryThreshold }) {
-		return arr.map(point => {
-			if(Math.random() <= probability) {
-				let sign = Math.random() <= 0.5 ? 1 : -1;
-
-				point.bearing += Math.random() * sign*bearingChange;
-				point.hasChangedBearing = true;
-			}
-
-			let prob = setNearBoundaryProbability(point, [height, width], boundaryThreshold);
-			point.bearing += Math.random() <= prob ? 90 : 0;
-			point.hasChangedBearing = prob > 0;
-			
-			return point
-		});
-	}
-
-	function getAverageBearing (arr) {
-		let totalDistance = arr.reduce((sum, point) => sum + point.distance, 0);
-		let sumWeightsAndBearing = arr.reduce((sum, point) => {
-			return sum + Math.pow(totalDistance-point.distance, 1) * point.bearing;
-		}, 0);
-		let sumWeights = arr.reduce((sum, point) => {
-			return sum + Math.pow(totalDistance-point.distance, 1);
-		}, 0);
-
-
-		return sumWeightsAndBearing / sumWeights;
-		//unweighted arithmetical average
-		//return arr.reduce((sum, point) => sum + point.bearing, 0) / arr.length;
-	}
-
-
-	function drawPoints (obj, ctx, arr) {
-		//ctx.clearRect(0, 0, obj.width, obj.height);	
-
-		arr.forEach(point => {
-			ctx.fillStyle = `hsl(${point.hue}, 100%, 50%)`;
-			ctx.fillRect(point.x, point.y, 5, 5);
-		})
-	}
-
-	function main (obj) {
-		let spacing = 10;
-		let canvas = document.getElementById('canvas');
-		let ctx = canvas.getContext('2d');
-
-		canvas.setAttribute('height', obj.height);
-		canvas.setAttribute('width', obj.width);
-
-		let birds = [];
-
-		for(let i = 0; i < obj.rows*obj.columns; i++) {
-			let x = 200 + (i % obj.rows) * spacing;
-			let y = (obj.height / 2) + Math.floor(i / obj.rows) * spacing;
-
-			birds.push( new Point(x, y) );
-		}
-
-		function getArrayAndDraw () {
-			let bearingsChangedArr = changeBearingWithProbability(birds, obj);
-			let bearingsAveragedArr = bearingsChangedArr.map(point => {
-				if(!point.hasBearingChanged) {
-					let nearestNeighboursArr = getNNearestNeighbours(bearingsChangedArr, point, obj.nearestNeighbours);
-
-					point.hasBearingChanged = false;
-					point.bearing = getAverageBearing(nearestNeighboursArr);
-				}
-
-				return translatePointInDirection(point, obj.distance);
-			});
-
-			birds = bearingsAveragedArr
-
-			drawPoints(obj, ctx, birds)
-		}
-
-		getArrayAndDraw()
-		setTimeout(() => {
-			setInterval(getArrayAndDraw, 50)
-		}, 1000)
-	}
-
-	main({
-		height: 500,
-		width: 1000,
-		boundaryThreshold: 50,
-		rows: 10,
-		columns: 10,
-		bearingChange: 90,
-		probability: 0.5,
-		nearestNeighbours: 5,
-		distance: 3
-	});
-</script>
